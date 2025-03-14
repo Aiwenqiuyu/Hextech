@@ -5,7 +5,8 @@ bin-release/
 [Bb]in/
 build/
 __pycache__/
-
+./__pycache__/
+./hextech/__pycache__/
 # Other files and folders
 .settings/
 log.md
@@ -18,6 +19,7 @@ api_key.py
 *.spec
 *.exe
 *.dll
+*.pyc
 
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important

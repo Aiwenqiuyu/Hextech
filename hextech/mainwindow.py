@@ -211,7 +211,7 @@ class HeroRecommender(QMainWindow):
         self.current_pos_label = QLabel("我的位置：")
         self.generate_btn = QPushButton("生成智能推荐")
         self.generate_btn.setLayoutDirection(Qt.RightToLeft)
-        icon_path = "./hextech/resource/icons/gene-green.png"
+        icon_path = "./Hextech/hextech/resource/icons/gene-green.png"
         if os.path.exists(icon_path):
             self.generate_btn.setIcon(QIcon(icon_path))
         else:

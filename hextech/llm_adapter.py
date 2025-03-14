@@ -7,7 +7,7 @@ from openai import OpenAI
 from typing import AsyncGenerator
 from cache_manager import Cache
 from PyQt5.QtCore import Qt, QThread, pyqtSignal,QObject
-from api_key import OPENAI_API_KEY, OPENAI_MODEL
+# from api_key import OPENAI_API_KEY, OPENAI_MODEL
 
 class LLMHandler(QObject):  # 继承自QObject
     # 信号必须定义为类变量
@@ -19,10 +19,10 @@ class LLMHandler(QObject):  # 继承自QObject
         self.max_retries = 3
         self.cache = Cache()
         self.use_api = use_api
-        api_key = OPENAI_API_KEY
-        model = OPENAI_MODEL
-        if use_api:
-            self.init_api_client(api_key, model)
+        # api_key = OPENAI_API_KEY
+        # model = OPENAI_MODEL
+        # if use_api:
+        #     self.init_api_client(api_key, model)
 
 
     def run_in_thread(self, bp_data):
