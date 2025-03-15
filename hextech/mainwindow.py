@@ -1,14 +1,15 @@
 import os
 import sys
+import json
 import logging
 import datetime
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QFont,QIcon, QPixmap
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt, QSize,QObject, pyqtSlot
 from analysis import TeamAnalysis
 from lolhelper import *
 from llm_adapter import LLMHandler
-
+from utils import *
 class HeroCard(QGroupBox):
     def __init__(self, title, parent=None):
         super().__init__(title, parent)
@@ -211,7 +212,7 @@ class HeroRecommender(QMainWindow):
         self.current_pos_label = QLabel("我的位置：")
         self.generate_btn = QPushButton("生成智能推荐")
         self.generate_btn.setLayoutDirection(Qt.RightToLeft)
-        icon_path = "./Hextech/hextech/resource/icons/gene-green.png"
+        icon_path = "./hextech/resource/icons/gene-green.png"
         if os.path.exists(icon_path):
             self.generate_btn.setIcon(QIcon(icon_path))
         else:
@@ -479,23 +480,7 @@ class HeroRecommender(QMainWindow):
             self.current_pos_combo.setCurrentIndex(index)
 
     def get_last_bp_file(self):
-        # 获取当前Python文件所在的目录路径
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # 定义要创建的文件夹名称
-        folder_name = "resources"
-
-        # 构建新文件夹的完整路径
-        new_folder_path = os.path.join(current_dir, folder_name)
-
-        # 检查文件夹是否已存在，如果不存在则创建
-        if not os.path.exists(new_folder_path):
-            os.makedirs(new_folder_path)
-            #print(f"已成功创建文件夹: {new_folder_path}")
-        else:
-            #print(f"文件夹已存在: {new_folder_path}")
-            pass
-         # 获取最新的用户信息和BP信息文件
+        new_folder_path = create_data_folder("data")
         user_files = [f for f in os.listdir(new_folder_path) if f.startswith("user_info_")]
         bp_files = [f for f in os.listdir(new_folder_path) if f.startswith("bp_info_")]
     
@@ -522,21 +507,7 @@ class HeroRecommender(QMainWindow):
             return
         
     def get_bp_info_from_lol_client(self):
-        # 获取当前Python文件所在的目录路径
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # 定义要创建的文件夹名称
-        folder_name = "resources"
-
-        # 构建新文件夹的完整路径
-        new_folder_path = os.path.join(current_dir, folder_name)
-
-        # 检查文件夹是否已存在，如果不存在则创建
-        if not os.path.exists(new_folder_path):
-            os.makedirs(new_folder_path)
-            #print(f"已成功创建文件夹: {new_folder_path}")
-        else:
-            pass
+        new_folder_path = create_data_folder("data")
         
         if self.lol_connector is None:
             self.set_status_message(f"请先启动英雄联盟客户端", "error", 5000)
@@ -591,8 +562,25 @@ class HeroRecommender(QMainWindow):
         QApplication.processEvents()
         bp_data = self.analysis_tool.get_bp_data()
         # 与LLM通信
+        # 创建LLM处理器
         self.llm_handler = LLMHandler(use_api=False)
-        recommendations =  self.llm_handler.process_async(bp_data)
+        
+        # 连接信号到槽函数
+        self.llm_handler.finished.connect(self.on_recommendations_ready)
+        self.llm_handler.error.connect(self.on_llm_error)
+        
+        # 启动异步处理
+        self.thread = self.llm_handler.process_async(bp_data)
+
+    @pyqtSlot(list)
+    def on_recommendations_ready(self, recommendations):
+        # 这个函数将在LLM处理完成后被调用
+        # recommendations是LLM处理的结果（一个列表）
+        
+        print("收到推荐结果:", recommendations)
+        
+        # 更新UI显示推荐结果
+        # 例如，假设你有三个推荐卡片：
         # 更新推荐卡片
         for i in range(len(recommendations)):
             self.cards[i].hero_label.setText(recommendations[i]["hero"])
@@ -600,4 +588,23 @@ class HeroRecommender(QMainWindow):
             self.cards[i].strategy_label.setText(f"游戏思路：\n{recommendations[i]['strategy']}")
             
         self.statusBar().showMessage("推荐已更新 - " + ", ".join([r["hero"] for r in recommendations]))
+        
+        # 可选：断开信号连接，避免多次连接
+        self.llm_handler.finished.disconnect(self.on_recommendations_ready)
+        self.llm_handler.error.disconnect(self.on_llm_error)
+    
+    @pyqtSlot(str)
+    def on_llm_error(self, error_message):
+        # 这个函数将在LLM处理出错时被调用
+        
+        print("处理出错:", error_message)
+        
+        # 显示错误消息
+        # 例如，使用状态栏或对话框显示错误
+        self.statusBar().showMessage(f"错误: {error_message}")
+        
+        # 可选：断开信号连接，避免多次连接
+        self.llm_handler.finished.disconnect(self.on_recommendations_ready)
+        self.llm_handler.error.disconnect(self.on_llm_error)
+        
             
